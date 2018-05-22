@@ -7,14 +7,14 @@ Various helpers functions
 
 import os
 import sys
-import inspect
 import traceback
 import errno
 import subprocess
 import logging
+import logging.handlers
 import ConfigParser
 
-__author__ = "Arun <aghose@i2r.a-star.edu.sg>"
+__author__ = "Arun <hindol96[at]gmail.com>"
 
 ## App config parameters
 app_config = {
@@ -23,24 +23,35 @@ app_config = {
 	'server_passwd ': '',
 	'client_directory_root': '',
 	'server_directory_root': '',
+	'server_hostname': '',
 	'filename_ext': ''
 }
 
 
-def parse_config_file(filepath, logger):
+def parse_config_file(logger):
 	"""Reads and parses given config file to retrieve necessary program parameters"""
 	global app_config
 
 	try:
+		if sys.platform == 'win32':
+			filepath = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + '\config\\ft-daemon.conf'
+		else:
+			filepath = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + '/config/ft-daemon.conf'
+
+		if not os.path.exists(filepath):
+			logger.error("Config file is missing!")
+			os._exit(1)
+
 		config = ConfigParser.RawConfigParser(allow_no_value=True)
 		config.read(filepath)
 
-		app_config['app_mode'] = config.getint('General', 'app_mode')
+		app_config['app_mode'] = config.get('General', 'app_mode')
 		app_config['server_username'] = config.get('Authentication', 'server_username')
 		app_config['server_passwd'] = config.get('Authentication', 'server_passwd')
 		app_config['client_directory_root'] = config.get('Client', 'client_directory_root')
 		app_config['server_directory_root'] = config.get('Server', 'server_directory_root')
-		app_config['filename_ext'] = config.get('Log', 'filename_ext')
+		app_config['server_hostname'] = config.get('Server', 'server_hostname')
+		app_config['filename_ext'] = config.get('Client', 'filename_ext')
 
 		if app_config['app_mode'] is None or not app_config['app_mode']:
 			logger.error("'app_mode' is missing in config file.")
@@ -52,6 +63,14 @@ def parse_config_file(filepath, logger):
 				or ' ' in app_config['server_passwd']:
 			logger.error("'server_passwd' is missing in config file or invalid 'server_passwd'.")
 			sys.exit(1)
+		if app_config['server_directory_root'] is None or not app_config['server_directory_root'] \
+				or ' ' in app_config['server_directory_root']:
+			logger.error("'server_directory_root' is missing in config file or invalid 'server_directory_root'.")
+			sys.exit(1)
+		if app_config['server_hostname'] is None or not app_config['server_hostname'] \
+				or ' ' in app_config['server_hostname']:
+			logger.error("'server_hostname' is missing in config file or invalid 'server_hostname'.")
+			sys.exit(1)
 
 		if app_config['app_mode'] == 'client':
 			if app_config['client_directory_root'] is None or not app_config['client_directory_root'] \
@@ -61,12 +80,7 @@ def parse_config_file(filepath, logger):
 			if app_config['filename_ext'] is None:
 				logger.error("'filename_ext' is missing in config file.")
 				sys.exit(1)
-		elif app_config['app_mode'] == 'server':
-			if app_config['server_directory_root'] is None or not app_config['server_directory_root']\
-					or ' ' in app_config['server_directory_root']:
-				logger.error("'server_directory_root' is missing in config file or invalid 'server_directory_root'.")
-				sys.exit(1)
-		else:
+		elif not app_config['app_mode'] == 'server':
 			logger.error("'app_mode' is Invalid!")
 			sys.exit(1)
 
@@ -88,15 +102,16 @@ def add_fh_to_logger(logger):
 		log_file_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + '\logs\\ft-daemon.log'
 	else:
 		log_file_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + '/logs/ft-daemon.log'
-	fh = logging.FileHandler(log_file_path, 'w')
+	fh = logging.handlers.RotatingFileHandler(log_file_path, mode='a', maxBytes=10000000, backupCount=10)
+	fh.setFormatter(logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s'))
 	fh.setLevel(logging.DEBUG)
 	logger.addHandler(fh)
 	keep_fds = [fh.stream.fileno()]
 	return keep_fds
 
 
-def create_dir_root(app_mode, dir_root_path, logger):
-	if app_mode == 'server' or app_mode == 'server':
+def create_dir_root(app_mode, dir_root_path):
+	if app_mode == 'server' or app_mode == 'client':
 		## Create directory root
 		try:
 			os.makedirs(dir_root_path)
@@ -149,3 +164,19 @@ def module_exists(name):
 	except ImportError:
 		found = False
 	return found
+
+
+def isUserAdmin():
+	if os.name == 'nt':
+		import ctypes
+		try:
+			return ctypes.windll.shell32.IsUserAnAdmin()
+		except:
+			traceback.print_exc()
+			print "Admin check failed, assuming not an admin."
+			return False
+	elif os.name == 'posix':
+		# Check for root on Posix
+		return os.getuid() == 0
+	else:
+		raise RuntimeError, "Unsupported operating system for this module: %s" % (os.name,)

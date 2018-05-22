@@ -10,7 +10,7 @@ import logging
 import shutil
 import time
 
-__author__ = "Arun <aghose@i2r.a-star.edu.sg>"
+__author__ = "Arun <hindol96[at]gmail.com>"
 
 
 def server(logger, app_config):
