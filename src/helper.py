@@ -24,7 +24,6 @@ app_config = {
 	'client_directory_root': '',
 	'server_directory_root': '',
 	'server_hostname': '',
-	'filename_ext': ''
 }
 
 
@@ -46,6 +45,7 @@ def parse_config_file(logger):
 		config.read(filepath)
 
 		app_config['app_mode'] = config.get('General', 'app_mode')
+
 		app_config['server_username'] = config.get('Authentication', 'server_username')
 		app_config['server_passwd'] = config.get('Authentication', 'server_passwd')
 		app_config['client_directory_root'] = config.get('Client', 'client_directory_root')

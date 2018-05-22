@@ -14,3 +14,4 @@ fi
 my_dir="`dirname "$0"`"
 echo ""
 python2.7 $my_dir/src/main.py "$1"
+

@@ -12,7 +12,6 @@ import time
 
 __author__ = "Arun <hindol96[at]gmail.com>"
 
-
 def server(logger, app_config):
 
 	## Check if directories exists

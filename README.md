@@ -145,3 +145,4 @@ creating the file in that directory, it must not keep the file open and edit aft
 ft-daemon attempts to move file(s) from that directory whose last modified time is more than 30 
 seconds. If the file(s) are locked by an application, ft-daemon may simply fail to move them to 
 'in-sync' sub-directory and the file(s) will not be sent to server until the lock is released.
+
