@@ -1,7 +1,7 @@
 #!/bin/bash
 action=$1
-if [ "$action" != "start" -a "$action" != "stop" ]; then
-    echo "Usage: $0 <start/stop>"
+if [ "$action" != "start" -a "$action" != "stop" -a "$action" != "createuser" ]; then
+    echo "Usage: $0 <start|stop|createuser>"
     exit 1
 fi
 
@@ -12,6 +12,5 @@ fi
 }
 
 my_dir="`dirname "$0"`"
-echo ""
 python2.7 $my_dir/src/main.py "$1"
 

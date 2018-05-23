@@ -4,9 +4,9 @@ A cross-platform daemon/service for automatic file transfer from a sender to a r
 
 <br>
 
--------------
+
 What's this?
--------------
+=============
 
 ft-daemon is a file transfer daemon tool which facilitates automatic file transfer
 between two computers.
@@ -28,9 +28,9 @@ Some of its key features:
   
 <br>
 
-------------------
+
 How does it work?
-------------------
+==================
 
 The tool was created to serve a certain use-case where a computer wants to
 automatically and periodically send any type of file (binary or text) to another
@@ -53,41 +53,45 @@ It maintains following directory hierarchy in sender and receiver:
 Whatever file(s) Sender is generating and wants to send to receiver, it must put
 the file inside *client-directory-root/new*. ft-daemon periodically (every 10 sec)
 checks whether there is any file inside *client-directory-root/new* and whether the
-last modified time of the file(s) is more than 1 minute. If so, it first moves the 
-file to *client-directory-root/in-sync*. Then ft-daemon transmits the file to server 
-to it's server-directory-root/in-coming directory. Once successfully sent, the file 
-is then moved from from *client-directory-root/in-sync* to *client-directory-root/archived*.
+last modified time of the file(s) is more than 30 seconds. If so, it first moves the 
+file to *client-directory-root/in-sync*. While moving, it appends file modified time 
+(in epoch format) to filename so that even if the new files sender is generating have 
+the same name, it would not lead to any duplicate filenames. ft-daemon transmits the 
+moved file(s) to server immediately to server's *server-directory-root/incoming* directory. 
+Once successfully sent, the file is then moved from from *client-directory-root/in-sync* 
+to *client-directory-root/archived*.
 
-ft-daemon, that is running in receiver, periodically (every 10 sec) checks whether
-there is any new file in server-directory-root/in-coming directory and whether the
+ft-daemon, that is running in server/receiver, periodically (every 10 sec) checks whether
+there is any new file in *server-directory-root/incoming* directory and whether the
 last modified time of the file(s) is more than 30 seconds. If so, it moves the file(s)
-to server-directory-root/for-processing directory.
+to *server-directory-root/for-processing* directory.
 
 Once the file(s) in *server-directory-root/for-processing* directory are processed,
-receiver computer should move then out of from there to avoid unnecessary confusion.
+receiver computer should move them out from there to avoid unnecessary confusion.
 After processing, the file(s) can be moved to *server-directory-root/processed* directory.
 
-Instead of using root account or the user account ft-daemon is running under in server,
-ft-daemon creates a special account (username and password is configurable) in server
-for client to connect and send files. This account does not have it's own home directory
-and has read-write access only to *server-directory-root/in-coming* directory.
-
+In server machine, instead of using root account or the user account ft-daemon is running 
+under, ft-daemon creates a special account (username and password is configurable) in server
+for the client computer to connect and send files. This account does not have it's own home 
+directory and has read-write access only to *server-directory-root/incoming* directory.
 
 <br>
 
------------------
+
 How do I use it?
------------------
+=================
 
 #### On Server:
 
 To setup the whole system of automatic transfer, you first need to configure and start
 ft-daemon in the server/receiver computer.
 
-As of now, 'server' mode is only supported for Linux. You need to fill in or update
+As of now, 'server' mode is only supported in Linux. You need to fill in or update
 necessary parameters in *confg/ft-daemon.conf* file. Change 'app_mode' to 'server'.
 Update 'server_directory_root' - put appropriate value inside <>. Put a strong password
-for 'server_passwd' which client/sender uses to send files.
+for 'server_passwd' which client/sender uses to send files. If you wish, you many change
+'server_username' too. Just make sure, do not use any username which already exists in 
+the server computer.
 
 Once config file is ready, execute ft-daemon.sh as follows:
 
@@ -130,12 +134,11 @@ script in _administrator_ mode. Right-click on 'Command Prompt' icon in Start me
 'Run as administrator' to open command prompt in administrator mode. You should run the batch
 script from there.
 
-
 <br>
 
---------------
+
 Special notes
---------------
+==============
 
 In client/sender, whatever application is generating the file(s), for sending to server,
 it must create a new file every time. It should not open a file for a very long time and

@@ -31,22 +31,26 @@ def main(argv):
 	global app_config
 	global logger
 
-	USAGE = "\nUsage (in Linux):\n\tft-daemon.sh start|stop\n\nUsage (in Windows):\n\tft-daemon.bat start|stop\n"
+	USAGE = "\nUsage (in Linux):\n\tft-daemon.sh start|stop|createuser\n\nUsage (in Windows):\n\tft-daemon.bat start|stop\n"
 	pid_file = "/tmp/ft-daemon.pid"
 
 	try:
-
 		if len(argv) < 1:
 			print USAGE
 			os._exit(1)
 
 		action = argv[0]
-		if action not in ['start','stop']:
-			print USAGE
-			os._exit(1)
+		if sys.platform == 'win32':
+			if action not in ['start','stop']:
+				print USAGE
+				os._exit(1)
+		else:
+			if action not in ['start','stop','createuser']:
+				print USAGE
+				os._exit(1)
 
 		## Get confirmation
-		if action == 'start':
+		if action == 'start' or action == 'createuser':
 			input = raw_input("\nHave you configured config/ft-daemon.conf? [Y/n]: ")
 			if input != 'Y':
 				os._exit(1)
@@ -62,6 +66,11 @@ def main(argv):
 
 		## For 'client' mode, check if rsync client application exists
 		if app_config['app_mode'] == 'client':
+			if action == 'createuser':
+				logger.error("'createuser' is only valid if you are running ft-daemon in server mode\n")
+				print("'createuser' is only valid if you are running ft-daemon in server mode\n")
+				os._exit(2)
+
 			## Create directory structure
 			create_dir_root(app_config['app_mode'], app_config['client_directory_root'])
 
@@ -71,7 +80,7 @@ def main(argv):
 			if sys.platform == 'win32':
 				if not os.path.isfile(ft_app_path):
 					logger.error(
-						'File transfer tool (for client) cannot be found! Has it been removed from \'tools\' sub-directory?')
+						'File transfer tool (for client) cannot be found! Has it been removed from \'tools\' sub-directory?\n')
 					sys.exit(2)
 
 				win_client_path = os.path.dirname(os.path.realpath(__file__)) + '\win-client.py'
@@ -115,8 +124,20 @@ def main(argv):
 			if (sys.platform == 'win32'):
 				logger.error(
 					'You are tying to run ft-daemon in server mode in a Windows machine. '
-					'ft-daemon does not support Windows in server mode.')
-				sys.exit(2)
+					'ft-daemon does not support Windows in server mode.\n')
+				os._exit(2)
+
+			if action == 'createuser':
+				output = subprocess.check_output("whoami|tr -d '\n'", shell=True)
+				if output != 'root':
+					print(output)
+					logger.error("You need to run 'ft-daemon.sh createuser' as root or with sudo.")
+					print("You need to run 'ft-daemon.sh createuser' as root or with sudo.")
+					os._exit(2)
+				else:
+					create_user(app_config['server_username'], app_config['server_passwd'],
+					            app_config['server_directory_root'], logger)
+					os._exit(0)
 
 			from daemonize import Daemonize
 
@@ -124,7 +145,8 @@ def main(argv):
 			create_dir_root(app_config['app_mode'], app_config['server_directory_root'])
 
 			## Create server user
-			create_user(app_config['server_username'], app_config['server_passwd'], app_config['server_directory_root'])
+			if check_user(app_config['server_username'], logger):
+				os._exit(3)
 
 			if action == 'start':
 				## Start server daemon

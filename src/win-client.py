@@ -55,7 +55,7 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
 			## Get allowed filename extensions
 			filename_exts = [x.strip() for x in app_config['filename_ext'].split(',')]
 
-			logger.info('win-client.py: ft-daemon service started')
+			logger.info(__file__ + ': ft-daemon service started')
 			last_checked_time = 0
 			while not self.stopService:
 				if (int(time.time()) - last_checked_time < 10):
@@ -97,16 +97,16 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
 						else:
 							logger.info('%s successfully sent to server at %s' % (filepath, server_dir))
 							shutil.move(filepath, archive_dir + '/' + filename)
-							logger.info('%s moved to %s' % (filepath, archive_dir + '/'))
+							logger.info('Moved %s from %s to %s' % (filename, insync_dir, archive_dir))
 
 				last_checked_time = int(time.time())
 				time.sleep(2)
 
 		except:
 			traceback.print_exc(file=sys.stdout)
-			logger.exception('Got following exception in main')
+			logger.exception('Got following exception in ' + __file__)
 		finally:
-			logger.info('win-client.py: ft-daemon service stopped')
+			logger.info(__file__ + ': ft-daemon service stopped')
 
 
 if __name__ == '__main__':

@@ -50,7 +50,7 @@ def parse_config_file(logger):
 		app_config['server_passwd'] = config.get('Authentication', 'server_passwd')
 		app_config['client_directory_root'] = config.get('Client', 'client_directory_root')
 		app_config['server_directory_root'] = config.get('Server', 'server_directory_root')
-		app_config['server_hostname'] = config.get('Server', 'server_hostname')
+		app_config['server_hostname'] = config.get('Client', 'server_hostname')
 		app_config['filename_ext'] = config.get('Client', 'filename_ext')
 
 		if app_config['app_mode'] is None or not app_config['app_mode']:
@@ -67,10 +67,6 @@ def parse_config_file(logger):
 				or ' ' in app_config['server_directory_root']:
 			logger.error("'server_directory_root' is missing in config file or invalid 'server_directory_root'.")
 			sys.exit(1)
-		if app_config['server_hostname'] is None or not app_config['server_hostname'] \
-				or ' ' in app_config['server_hostname']:
-			logger.error("'server_hostname' is missing in config file or invalid 'server_hostname'.")
-			sys.exit(1)
 
 		if app_config['app_mode'] == 'client':
 			if app_config['client_directory_root'] is None or not app_config['client_directory_root'] \
@@ -79,6 +75,10 @@ def parse_config_file(logger):
 				sys.exit(1)
 			if app_config['filename_ext'] is None:
 				logger.error("'filename_ext' is missing in config file.")
+				sys.exit(1)
+			if app_config['server_hostname'] is None or not app_config['server_hostname'] \
+					or ' ' in app_config['server_hostname']:
+				logger.error("'server_hostname' is missing in config file or invalid 'server_hostname'.")
 				sys.exit(1)
 		elif not app_config['app_mode'] == 'server':
 			logger.error("'app_mode' is Invalid!")
@@ -90,7 +90,7 @@ def parse_config_file(logger):
 
 def create_logger(name):
 	## Create logger
-	logger = logging.getLogger('ft-daemon')
+	logger = logging.getLogger(name)
 	logger.setLevel(logging.DEBUG)
 	logger.propagate = False
 	return logger
@@ -139,20 +139,59 @@ def create_dir_root(app_mode, dir_root_path):
 		raise ValueError('Invalid app_mode')
 
 
+def check_user(username, logger):
+	"""This is for Linux or similar OS only"""
+	output = subprocess.check_output('id -u ' + username + ' 2>/dev/null | wc -l', shell=True)
+	if int(output) == 0:
+		logger.info("User account for file transfer does not exist!\n"
+		            "Please run 'ft-daemon.sh createuser' with root privilege (sudo) to create the user.")
+		print("User account for file transfer does not exist!\n"
+		      "Please run 'ft-daemon.sh createuser' with root privilege (sudo) to create the user.")
+		return False
+	else:
+		output = subprocess.check_output('whoami', shell=True)
+		if output == 'root':
+			logger.warning("You are running ft-daemon as root which is not necessary and risky.")
+			print("You are running ft-daemon as root which is not necessary and risky.")
+			input = raw_input('Do you want to continue? [Y/n]: ')
+			if input != "Y":
+				return False
+	return True
+
+
 def create_user(username, passwd, dir_root_path, logger):
 	"""This is for Linux or similar OS only"""
 	output = subprocess.check_output('id -u ' + username + ' 2>/dev/null | wc -l', shell=True)
 	if int(output) == 0:
-		logger.info('User account for file transfer does not exist! This application will try to create it...')
+		logger.info('User account for file transfer does not exist! Attempting to create it...')
+		print('User account for file transfer does not exist! Attempting to create it...')
 	else:
+		logger.info('User account already exists! Exiting...')
+		print('User account already exists! Exiting...')
 		return 0
+
+	# ret = os.system('which makepasswd 1>/dev/null')
+	# if ret != 0:
+	# 	logger.info('makepasswd utility is not found! Please install it first.')
+	# 	print('makepasswd utility is not found! Please install it first.\n')
+	# 	os._exit(2)
+
 	uid = os.getuid()
 	if int(uid) != 0:
-		logger.info('Please re-run this application as root/sudo to create user for client to send files.')
-		sys.exit()
+		logger.info('Please re-run ft-daemon with root privilege (sudo) to create user for client to send files.')
+		print('Please re-run ft-daemon with root privilege (sudo) to create user for client to send files.\n')
+		os._exit(2)
 
-	os.system("useradd -p $(makepasswd --clearfrom=- --crypt-md5 <<< " + passwd + " | awk '{print $2}' | tr -d '\n') -s /bin/bash " + username)
-	os.system('chgrp -R ' + username + ' ' + dir_root_path + '/new')
+	cmd = 'useradd -s /bin/bash %s && echo "%s:%s"|chpasswd' % (username, username, passwd)
+	# print(cmd)
+	if os.system(cmd) == 0:
+		os.system('chgrp -R ' + username + ' ' + dir_root_path + '/incoming')
+		logger.info('User account successfully created.')
+		print('User account successfully created.')
+	else:
+		logger.info('Failed to create user account!')
+		print('Failed to create user account!')
+		os._exit(2)
 	return 0
 
 
