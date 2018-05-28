@@ -9,12 +9,10 @@ can be killed from console (in Linux) or from Task manager (in Windows). It also
 when computer reboots or shuts down and doesn't start automatically.
 """
 
-# import getopt
 from helper import *
 import client
-import server
+from server import *
 import shutil
-import time
 
 __author__ = "Arun <hindol96[at]gmail.com>"
 
@@ -55,20 +53,19 @@ def main(argv):
 			if input != 'Y':
 				os._exit(1)
 
-		## Create logger
+		## Create logger and add file handler to it
 		logger = create_logger('ft-daemon')
+		keep_fds = add_fh_to_logger(logger)
+		hdlr = add_stdout_to_logger(logger)
 
 		## Parse config file parameters
 		parse_config_file(logger)
 
-		## Add file hanlder to logger
-		keep_fds = add_fh_to_logger(logger)
-
 		## For 'client' mode, check if rsync client application exists
 		if app_config['app_mode'] == 'client':
 			if action == 'createuser':
-				logger.error("'createuser' is only valid if you are running ft-daemon in server mode\n")
-				print("'createuser' is only valid if you are running ft-daemon in server mode\n")
+				logger.error("'createuser' is only valid if you are running ft-daemon in server mode")
+				# print("'createuser' is only valid if you are running ft-daemon in server mode\n")
 				os._exit(2)
 
 			## Create directory structure
@@ -145,16 +142,14 @@ def main(argv):
 			create_dir_root(app_config['app_mode'], app_config['server_directory_root'])
 
 			## Create server user
-			if check_user(app_config['server_username'], logger):
+			if not check_user(app_config['server_username'], logger):
 				os._exit(3)
 
 			if action == 'start':
 				## Start server daemon
-				daemon = Daemonize(app="ft-daemon-server", pid=pid_file, action=server, keep_fds=keep_fds, logger=logger,
-				                   privileged_action=get_params_for_daemonized_fn)
+				daemon = Daemonize(app="ft-daemon-server", pid=pid_file, action=server, keep_fds=keep_fds, logger=logger, privileged_action=get_params_for_daemonized_fn)
+				logger.info('Starting ft-daemon in server mode... Check logs/ft-daemon.log for status logs.')
 				daemon.start()
-				pid = subprocess.check_output('cat ' + pid_file, shell=True)
-				logger.info('ft-daemon has been started in server mode. pid = ' + pid)
 			else:
 				os.system('kill -9 `cat %s`' % pid_file)
 				logger.info('ft-daemon has been stopped.')

@@ -103,11 +103,21 @@ def add_fh_to_logger(logger):
 	else:
 		log_file_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + '/logs/ft-daemon.log'
 	fh = logging.handlers.RotatingFileHandler(log_file_path, mode='a', maxBytes=10000000, backupCount=10)
-	fh.setFormatter(logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] - %(message)s'))
+	fh.setFormatter(logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s] - %(message)s'))
 	fh.setLevel(logging.DEBUG)
 	logger.addHandler(fh)
 	keep_fds = [fh.stream.fileno()]
 	return keep_fds
+
+
+def add_stdout_to_logger(logger):
+	## Add stdout to logger
+	fh = logging.StreamHandler(sys.stdout)
+	fh.setFormatter(logging.Formatter('[%(name)s][%(levelname)s] - %(message)s'))
+	fh.setLevel(logging.DEBUG)
+	logger.addHandler(fh)
+
+	return fh
 
 
 def create_dir_root(app_mode, dir_root_path):
@@ -143,16 +153,16 @@ def check_user(username, logger):
 	"""This is for Linux or similar OS only"""
 	output = subprocess.check_output('id -u ' + username + ' 2>/dev/null | wc -l', shell=True)
 	if int(output) == 0:
-		logger.info("User account for file transfer does not exist!\n"
+		logger.info("User account for file transfer does not exist! "
 		            "Please run 'ft-daemon.sh createuser' with root privilege (sudo) to create the user.")
-		print("User account for file transfer does not exist!\n"
-		      "Please run 'ft-daemon.sh createuser' with root privilege (sudo) to create the user.")
+		# print("User account for file transfer does not exist!\n"
+		#       "Please run 'ft-daemon.sh createuser' with root privilege (sudo) to create the user.")
 		return False
 	else:
 		output = subprocess.check_output('whoami', shell=True)
 		if output == 'root':
 			logger.warning("You are running ft-daemon as root which is not necessary and risky.")
-			print("You are running ft-daemon as root which is not necessary and risky.")
+			# print("You are running ft-daemon as root which is not necessary and risky.")
 			input = raw_input('Do you want to continue? [Y/n]: ')
 			if input != "Y":
 				return False
@@ -164,10 +174,10 @@ def create_user(username, passwd, dir_root_path, logger):
 	output = subprocess.check_output('id -u ' + username + ' 2>/dev/null | wc -l', shell=True)
 	if int(output) == 0:
 		logger.info('User account for file transfer does not exist! Attempting to create it...')
-		print('User account for file transfer does not exist! Attempting to create it...')
+		# print('User account for file transfer does not exist! Attempting to create it...')
 	else:
 		logger.info('User account already exists! Exiting...')
-		print('User account already exists! Exiting...')
+		# print('User account already exists! Exiting...')
 		return 0
 
 	# ret = os.system('which makepasswd 1>/dev/null')
@@ -179,7 +189,7 @@ def create_user(username, passwd, dir_root_path, logger):
 	uid = os.getuid()
 	if int(uid) != 0:
 		logger.info('Please re-run ft-daemon with root privilege (sudo) to create user for client to send files.')
-		print('Please re-run ft-daemon with root privilege (sudo) to create user for client to send files.\n')
+		# print('Please re-run ft-daemon with root privilege (sudo) to create user for client to send files.\n')
 		os._exit(2)
 
 	cmd = 'useradd -s /bin/bash %s && echo "%s:%s"|chpasswd' % (username, username, passwd)
@@ -187,10 +197,10 @@ def create_user(username, passwd, dir_root_path, logger):
 	if os.system(cmd) == 0:
 		os.system('chgrp -R ' + username + ' ' + dir_root_path + '/incoming')
 		logger.info('User account successfully created.')
-		print('User account successfully created.')
+		# print('User account successfully created.')
 	else:
 		logger.info('Failed to create user account!')
-		print('Failed to create user account!')
+		# print('Failed to create user account!')
 		os._exit(2)
 	return 0
 

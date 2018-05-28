@@ -35,9 +35,8 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
 		self.main()
 
 	def main(self):
-		## Create logger
+		## Create logger and add file handler to it
 		logger = create_logger('ft-daemon')
-		## Add file hanlder to logger
 		keep_fds = add_fh_to_logger(logger)
 
 		try:
@@ -88,6 +87,7 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
 				for filename in os.listdir(insync_dir):
 					if sys.platform == 'win32':
 						filepath = insync_dir + '/' + filename
+						filesize = str(int(os.path.getsize(filepath) / 1000)) + 'KB'
 						cmd = "echo y | %s -l %s -pw %s %s %s:%s" % (
 							ft_app_path, app_config['server_username'], app_config['server_passwd'], filepath,
 							app_config['server_hostname'], server_dir)
@@ -95,7 +95,7 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
 						if (int(output) != 0):
 							logger.error('Failed to send %s to server! Error code = %d' % (filepath, int(output)))
 						else:
-							logger.info('%s successfully sent to server at %s' % (filepath, server_dir))
+							logger.info('%s (%s) successfully sent to server at %s' % (filepath, filesize, server_dir))
 							shutil.move(filepath, archive_dir + '/' + filename)
 							logger.info('Moved %s from %s to %s' % (filename, insync_dir, archive_dir))
 

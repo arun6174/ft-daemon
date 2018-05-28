@@ -27,11 +27,13 @@ def server(logger, app_config):
 			## check if any new file(s) exist in source dir and if they haven't
 			## been modified in last 1 minute, then move them to destination (in-sync) subdir.
 			for filename in os.listdir(incoming_dir):
-				mtime = os.path.getmtime(os.path.abspath(filename))
+				filepath = incoming_dir + os.path.abspath(filename)
+				filesize = str(int(os.path.getsize(filepath) / 1000)) + 'KB'
+				mtime = os.path.getmtime(filepath)
 				curr_time = int(time.time())
 				if (curr_time - mtime > 30):
-					shutil.move(incoming_dir + '/' + filename, target_dir + '/' + filename)
-					logger.info('Moved %s from %s to %s' % (filename, incoming_dir, target_dir))
+					shutil.move(filepath, target_dir + '/' + filename)
+					logger.info('Moved %s (%s) from %s to %s' % (filename, filesize, incoming_dir, target_dir))
 				continue
 
 			last_checked_time = int(time.time())

@@ -95,16 +95,20 @@ the server computer.
 
 Once config file is ready, execute ft-daemon.sh as follows:
 
+  - To create the user account (need to be executed only once):
+
+        $ ./ft-daemon.sh createuser
+  
   - To start the daemon:
 
-        ft-daemon.sh start
+        $ ./ft-daemon.sh start
 
   - To stop the daemon:
 
-        ft-daemon.sh stop
+        $ ./ft-daemon.sh stop
 
 It prints out necessary logs and will guide you through. Once the daemon is running,
-you can check the logs in logs/ sub-directory.
+you can check the logs in *logs/* sub-directory.
 
 
 #### On Client:
