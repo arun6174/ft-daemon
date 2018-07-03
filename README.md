@@ -38,7 +38,6 @@ computer.
 
 The assumption in the use-case is that the sender is constantly and periodically
 generating file(s) which it wants to send to receiver for some sort of processing.
-Once a file is sent, it should never be sent again.
 
 It maintains following directory hierarchy in sender and receiver:
 
